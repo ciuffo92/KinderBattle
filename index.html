@@ -1,0 +1,771 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Spiel & Spaß - Duell 6 vs. 10 Jahre!</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Tone.js per gli effetti sonori generati dal browser -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+    <!-- Google Fonts: Fredoka per un look giocoso e arrotondato -->
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        body {
+            font-family: 'Fredoka', sans-serif;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: manipulation;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            overflow-x: hidden;
+        }
+
+        /* Animazioni divertenti */
+        @keyframes bounce-slight {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-8px); }
+        }
+        .animate-bounce-slight {
+            animation: bounce-slight 2s infinite ease-in-out;
+        }
+
+        @keyframes pop-in {
+            0% { transform: scale(0.8); opacity: 0; }
+            70% { transform: scale(1.05); }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .pop-in {
+            animation: pop-in 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+
+        /* Effetto carte Memory */
+        .memory-card {
+            perspective: 1000px;
+            cursor: pointer;
+        }
+        .memory-card-inner {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            text-align: center;
+            transition: transform 0.5s;
+            transform-style: preserve-3d;
+        }
+        .memory-card.flipped .memory-card-inner {
+            transform: rotateY(180deg);
+        }
+        .memory-card-front, .memory-card-back {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            -webkit-backface-visibility: hidden;
+            backface-visibility: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 1rem;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .memory-card-back {
+            transform: rotateY(180deg);
+        }
+
+        /* Bottoni stile Arcade */
+        .btn-arcade {
+            transition: all 0.1s;
+            box-shadow: 0 6px 0 rgba(0,0,0,0.25);
+        }
+        .btn-arcade:active {
+            transform: translateY(4px);
+            box-shadow: 0 2px 0 rgba(0,0,0,0.25);
+        }
+
+        /* Stile specifico per il Canvas */
+        canvas {
+            touch-action: none;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center justify-between p-3 sm:p-6 text-gray-800">
+
+    <!-- HEADER: Punteggi dei due giocatori -->
+    <header class="w-full max-w-4xl bg-white/95 backdrop-blur-md rounded-3xl p-3 sm:p-4 shadow-xl flex flex-wrap items-center justify-between gap-2 mb-4 border-4 border-yellow-300">
+        <!-- Giocatore 1 (6 anni) -->
+        <div class="flex items-center gap-2 sm:gap-3 bg-orange-100 px-3 py-2 rounded-2xl border-2 border-orange-400">
+            <span class="text-2xl sm:text-4xl">🦁</span>
+            <div>
+                <div class="text-xs sm:text-sm font-bold text-orange-600 uppercase">Löwe (6 Jahre)</div>
+                <div class="text-xl sm:text-2xl font-black text-orange-800"><span id="score-p1">0</span> ⭐</div>
+            </div>
+        </div>
+
+        <!-- Titolo / Bottone Home -->
+        <button onclick="showMenu()" class="btn-arcade bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 px-4 rounded-2xl text-sm sm:text-lg flex items-center gap-2">
+            <span>🏠</span> <span class="hidden sm:inline">Spiele-Menü</span>
+        </button>
+
+        <!-- Giocatore 2 (10 anni) -->
+        <div class="flex items-center gap-2 sm:gap-3 bg-teal-100 px-3 py-2 rounded-2xl border-2 border-teal-400">
+            <div class="text-right">
+                <div class="text-xs sm:text-sm font-bold text-teal-600 uppercase">Drache (10 Jahre)</div>
+                <div class="text-xl sm:text-2xl font-black text-teal-800"><span id="score-p2">0</span> ⭐</div>
+            </div>
+            <span class="text-2xl sm:text-4xl">🐲</span>
+        </div>
+    </header>
+
+    <!-- AREA PRINCIPALE DEL GIOCO -->
+    <main id="app-container" class="w-full max-w-4xl flex-grow flex flex-col items-center justify-center">
+        
+        <!-- SCHERMATA 1: MENU PRINCIPALE -->
+        <div id="menu-screen" class="w-full grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 pop-in">
+            
+            <!-- Gioco 1: Tauziehen -->
+            <div onclick="startTugOfWar()" class="btn-arcade cursor-pointer bg-gradient-to-br from-amber-300 to-orange-400 p-6 rounded-3xl border-4 border-white shadow-xl flex flex-col items-center text-center group">
+                <div class="text-6xl mb-3 group-hover:scale-110 transition-transform">🪢</div>
+                <h2 class="text-2xl sm:text-3xl font-black text-white drop-shadow">Tauziehen!</h2>
+                <p class="text-orange-950 font-semibold mt-2 text-sm sm:text-base">Wer tippt schneller? Der Kleine hat einen geheimen Super-Boost, damit es fair bleibt!</p>
+                <span class="mt-4 bg-white text-orange-600 font-bold px-4 py-1 rounded-full text-sm">2 Spieler • Tempo</span>
+            </div>
+
+            <!-- Gioco 2: Geniales Duell -->
+            <div onclick="startQuizDuel()" class="btn-arcade cursor-pointer bg-gradient-to-br from-emerald-300 to-teal-500 p-6 rounded-3xl border-4 border-white shadow-xl flex flex-col items-center text-center group">
+                <div class="text-6xl mb-3 group-hover:scale-110 transition-transform">🧠</div>
+                <h2 class="text-2xl sm:text-3xl font-black text-white drop-shadow">Geniales Duell!</h2>
+                <p class="text-teal-950 font-semibold mt-2 text-sm sm:text-base">Passende Fragen für jedes Alter! Farben & Tiere für 6 Jahre, Mathe & Logik für 10 Jahre!</p>
+                <span class="mt-4 bg-white text-teal-600 font-bold px-4 py-1 rounded-full text-sm">2 Spieler • Köpfchen</span>
+            </div>
+
+            <!-- Gioco 3: Super Memory -->
+            <div onclick="startMemoryGame()" class="btn-arcade cursor-pointer bg-gradient-to-br from-pink-400 to-rose-500 p-6 rounded-3xl border-4 border-white shadow-xl flex flex-col items-center text-center group">
+                <div class="text-6xl mb-3 group-hover:scale-110 transition-transform">🃏</div>
+                <h2 class="text-2xl sm:text-3xl font-black text-white drop-shadow">Super Memory</h2>
+                <p class="text-rose-950 font-semibold mt-2 text-sm sm:text-base">Spielt im Team oder abwechselnd und findet alle verrückten Emoji-Paare!</p>
+                <span class="mt-4 bg-white text-rose-600 font-bold px-4 py-1 rounded-full text-sm">Team / Runden • Gedächtnis</span>
+            </div>
+
+            <!-- Gioco 4: Sternenregen -->
+            <div onclick="startStarCatcher()" class="btn-arcade cursor-pointer bg-gradient-to-br from-sky-400 to-blue-600 p-6 rounded-3xl border-4 border-white shadow-xl flex flex-col items-center text-center group">
+                <div class="text-6xl mb-3 group-hover:scale-110 transition-transform">🌠</div>
+                <h2 class="text-2xl sm:text-3xl font-black text-white drop-shadow">Sternenregen</h2>
+                <p class="text-blue-950 font-semibold mt-2 text-sm sm:text-base">Tippt auf die Sternschnuppen und weicht den Geistern aus! Gemeinsam Punkte sammeln!</p>
+                <span class="mt-4 bg-white text-blue-600 font-bold px-4 py-1 rounded-full text-sm">Kooperativ • Reaktion</span>
+            </div>
+
+        </div>
+
+        <!-- SCHERMATA 2: TAUZIEHEN -->
+        <div id="game-tug" class="hidden w-full bg-white rounded-3xl p-4 sm:p-8 shadow-2xl border-4 border-orange-300 flex-col items-center pop-in">
+            <h2 class="text-2xl sm:text-4xl font-black text-orange-600 mb-2 text-center">🪢 Tauziehen! 🪢</h2>
+            <p class="text-gray-600 font-semibold mb-6 text-center text-sm sm:text-base">Drückt euren Knopf so schnell ihr könnt!</p>
+            
+            <!-- Barra della fune -->
+            <div class="w-full bg-gray-200 h-16 rounded-full p-2 relative overflow-hidden border-4 border-gray-300 mb-8 flex items-center">
+                <div class="h-full bg-orange-400 rounded-l-full transition-all duration-75" id="tug-bar-p1" style="width: 50%;"></div>
+                <div class="h-full bg-teal-400 rounded-r-full transition-all duration-75" id="tug-bar-p2" style="width: 50%;"></div>
+                <div id="tug-flag" class="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 text-4xl transition-all duration-75" style="left: 50%;">
+                    🚩
+                </div>
+            </div>
+
+            <!-- Pulsanti Giganti per i 2 giocatori -->
+            <div class="w-full grid grid-cols-2 gap-4 sm:gap-8">
+                <button id="btn-tug-p1" onpointerdown="pullRope(1)" class="btn-arcade bg-orange-500 hover:bg-orange-600 text-white rounded-3xl py-10 sm:py-16 flex flex-col items-center justify-center border-4 border-orange-200">
+                    <span class="text-5xl sm:text-7xl mb-2">🦁</span>
+                    <span class="text-xl sm:text-3xl font-black">ZIEH!</span>
+                    <span class="text-xs sm:text-sm opacity-80 mt-1">(Oder Taste A)</span>
+                </button>
+
+                <button id="btn-tug-p2" onpointerdown="pullRope(2)" class="btn-arcade bg-teal-500 hover:bg-teal-600 text-white rounded-3xl py-10 sm:py-16 flex flex-col items-center justify-center border-4 border-teal-200">
+                    <span class="text-5xl sm:text-7xl mb-2">🐲</span>
+                    <span class="text-xl sm:text-3xl font-black">ZIEH!</span>
+                    <span class="text-xs sm:text-sm opacity-80 mt-1">(Oder Taste L)</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- SCHERMATA 3: GENIALES DUELL (QUIZ ADATTIVO) -->
+        <div id="game-quiz" class="hidden w-full bg-white rounded-3xl p-4 sm:p-8 shadow-2xl border-4 border-teal-300 flex-col items-center pop-in">
+            <div id="quiz-turn-badge" class="px-6 py-2 rounded-full font-black text-white text-lg sm:text-2xl mb-4 shadow-md bg-orange-500">
+                Löwe ist dran (6 Jahre) 🦁
+            </div>
+
+            <div class="bg-indigo-50 w-full p-6 rounded-2xl border-2 border-indigo-200 text-center mb-6">
+                <div id="quiz-visual" class="text-5xl sm:text-7xl mb-4">🍎 + 🍎 = ?</div>
+                <h3 id="quiz-question" class="text-xl sm:text-3xl font-bold text-indigo-900">Wie viele Äpfel sind es zusammen?</h3>
+            </div>
+
+            <div id="quiz-options" class="w-full grid grid-cols-2 gap-4">
+                <!-- Opzioni generate via JS -->
+            </div>
+        </div>
+
+        <!-- SCHERMATA 4: SUPER MEMORY -->
+        <div id="game-memory" class="hidden w-full bg-white rounded-3xl p-4 sm:p-6 shadow-2xl border-4 border-pink-300 flex-col items-center pop-in">
+            <div class="flex flex-wrap justify-between items-center w-full mb-4 gap-2">
+                <h2 class="text-2xl sm:text-3xl font-black text-pink-600">🃏 Super Memory</h2>
+                <div id="memory-turn" class="bg-orange-100 text-orange-800 border-2 border-orange-400 px-4 py-1 rounded-full font-bold text-sm sm:text-base">
+                    Dran ist: 🦁 Löwe
+                </div>
+                <button onclick="initMemoryBoard()" class="btn-arcade bg-pink-500 text-white px-4 py-1 rounded-xl font-bold text-sm">
+                    🔄 Mischen
+                </button>
+            </div>
+
+            <!-- Griglia 4x4 -->
+            <div id="memory-grid" class="grid grid-cols-4 gap-2 sm:gap-4 w-full max-w-md aspect-square">
+                <!-- Carte generate via JS -->
+            </div>
+        </div>
+
+        <!-- SCHERMATA 5: STERNENREGEN (CANVAS GAME) -->
+        <div id="game-stars" class="hidden w-full bg-slate-900 rounded-3xl p-3 sm:p-5 shadow-2xl border-4 border-sky-400 flex-col items-center pop-in">
+            <div class="flex justify-between items-center w-full text-white mb-2 px-2">
+                <div class="font-bold text-lg sm:text-2xl text-yellow-300">⭐ Sterne: <span id="star-score">0</span></div>
+                <div class="font-bold text-lg sm:text-2xl text-sky-300">⏱️ Zeit: <span id="star-time">30</span>s</div>
+            </div>
+            <p class="text-sky-200 text-xs sm:text-sm mb-2 text-center">Tippt auf Sterne ⭐ (+1) und Diamanten 💎 (+3). Achtung vor Geistern 👻 (-2)!</p>
+            
+            <div id="canvas-container" class="w-full h-80 sm:h-96 bg-slate-800 rounded-2xl overflow-hidden relative border-2 border-slate-700">
+                <canvas id="star-canvas" class="w-full h-full block cursor-pointer"></canvas>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- MODALE MESSAGGI / VITTORIA -->
+    <div id="modal-overlay" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl p-6 sm:p-8 max-w-md w-full text-center shadow-2xl border-4 border-yellow-400 pop-in">
+            <div id="modal-emoji" class="text-7xl mb-4 animate-bounce-slight">🏆</div>
+            <h2 id="modal-title" class="text-2xl sm:text-3xl font-black text-gray-800 mb-2">Fantastisch!</h2>
+            <p id="modal-text" class="text-gray-600 font-semibold text-base sm:text-lg mb-6">Ihr habt zusammen gewonnen!</p>
+            <button id="modal-btn" onclick="closeModal()" class="btn-arcade w-full bg-green-500 hover:bg-green-600 text-white font-black text-xl py-3 rounded-2xl">
+                Weiterspielen! 🚀
+            </button>
+        </div>
+    </div>
+
+    <!-- FOOTER CON CONTROLLO AUDIO -->
+    <footer class="mt-4 text-white/80 text-xs sm:text-sm flex items-center gap-4">
+        <span>Gemacht für gemeinsamen Spielspaß ❤️</span>
+        <button id="sound-toggle" onclick="toggleSound()" class="bg-white/20 hover:bg-white/30 px-3 py-1 rounded-full font-bold text-white transition">
+            🔊 Ton: AN
+        </button>
+    </footer>
+
+    <!-- LOGICA JAVASCRIPT -->
+    <script>
+        // ==========================================
+        // 1. GESTIONE STATO E AUDIO (Tone.js)
+        // ==========================================
+        let scores = { p1: 0, p2: 0 };
+        let soundEnabled = true;
+        let synth = null;
+
+        // Inizializza il sintetizzatore audio al primo tocco dell'utente
+        function initAudio() {
+            if (!synth && typeof Tone !== 'undefined') {
+                Tone.start();
+                synth = new Tone.PolySynth(Tone.Synth).toDestination();
+                synth.volume.value = -8;
+            }
+        }
+
+        function playSound(type) {
+            if (!soundEnabled) return;
+            initAudio();
+            if (!synth) return;
+
+            try {
+                if (type === 'pop') {
+                    synth.triggerAttackRelease("C5", "16n");
+                } else if (type === 'pull1') {
+                    synth.triggerAttackRelease("E4", "32n");
+                } else if (type === 'pull2') {
+                    synth.triggerAttackRelease("G4", "32n");
+                } else if (type === 'win') {
+                    const now = Tone.now();
+                    synth.triggerAttackRelease("C5", "8n", now);
+                    synth.triggerAttackRelease("E5", "8n", now + 0.1);
+                    synth.triggerAttackRelease("G5", "8n", now + 0.2);
+                    synth.triggerAttackRelease("C6", "4n", now + 0.3);
+                } else if (type === 'error') {
+                    synth.triggerAttackRelease("C3", "8n");
+                } else if (type === 'star') {
+                    synth.triggerAttackRelease("A5", "32n");
+                }
+            } catch (e) {
+                console.log("Audio non ancora pronto");
+            }
+        }
+
+        function toggleSound() {
+            soundEnabled = !soundEnabled;
+            document.getElementById('sound-toggle').innerText = soundEnabled ? "🔊 Ton: AN" : "🔇 Ton: AUS";
+        }
+
+        function updateScoreDisplay() {
+            document.getElementById('score-p1').innerText = scores.p1;
+            document.getElementById('score-p2').innerText = scores.p2;
+        }
+
+        function addPoints(player, pts) {
+            if (player === 1) scores.p1 += pts;
+            if (player === 2) scores.p2 += pts;
+            if (player === 'both') {
+                scores.p1 += pts;
+                scores.p2 += pts;
+            }
+            updateScoreDisplay();
+        }
+
+        // ==========================================
+        // 2. NAVIGAZIONE E MODALI
+        // ==========================================
+        const screens = ['menu-screen', 'game-tug', 'game-quiz', 'game-memory', 'game-stars'];
+        let starGameInterval = null;
+        let starAnimFrame = null;
+
+        function hideAllScreens() {
+            screens.forEach(id => {
+                document.getElementById(id).classList.add('hidden');
+                document.getElementById(id).classList.remove('flex');
+            });
+            // Ferma eventuali loop del gioco delle stelle
+            if (starGameInterval) clearInterval(starGameInterval);
+            if (starAnimFrame) cancelAnimationFrame(starAnimFrame);
+        }
+
+        function showMenu() {
+            playSound('pop');
+            hideAllScreens();
+            const menu = document.getElementById('menu-screen');
+            menu.classList.remove('hidden');
+            menu.classList.add('grid');
+        }
+
+        function showModal(emoji, title, text, callback = null) {
+            document.getElementById('modal-emoji').innerText = emoji;
+            document.getElementById('modal-title').innerText = title;
+            document.getElementById('modal-text').innerText = text;
+            
+            const overlay = document.getElementById('modal-overlay');
+            overlay.classList.remove('hidden');
+            
+            const btn = document.getElementById('modal-btn');
+            btn.onclick = () => {
+                overlay.classList.add('hidden');
+                playSound('pop');
+                if (callback) callback();
+            };
+        }
+
+        // ==========================================
+        // 3. GIOCO 1: TIRO ALLA FUNE (Con bilanciamento età)
+        // ==========================================
+        let ropePosition = 50; // 0 = Vince P1, 100 = Vince P2
+        let tugActive = false;
+
+        function startTugOfWar() {
+            playSound('pop');
+            hideAllScreens();
+            const screen = document.getElementById('game-tug');
+            screen.classList.remove('hidden');
+            screen.classList.add('flex');
+            
+            ropePosition = 50;
+            tugActive = true;
+            updateRopeUI();
+        }
+
+        function pullRope(player) {
+            if (!tugActive) return;
+
+            if (player === 1) {
+                playSound('pull1');
+                ropePosition -= 4.2;
+            } else {
+                playSound('pull2');
+                ropePosition += 3.3;
+            }
+
+            ropePosition = Math.max(0, Math.min(100, ropePosition));
+            updateRopeUI();
+
+            if (ropePosition <= 5) {
+                tugActive = false;
+                playSound('win');
+                addPoints(1, 3);
+                showModal('🦁', 'Löwe gewinnt!', 'Unglaubliche Kraft! +3 Sterne für den 6-Jährigen!', startTugOfWar);
+            } else if (ropePosition >= 95) {
+                tugActive = false;
+                playSound('win');
+                addPoints(2, 3);
+                showModal('🐲', 'Drache gewinnt!', 'Überschall-Geschwindigkeit! +3 Sterne für den 10-Jährigen!', startTugOfWar);
+            }
+        }
+
+        function updateRopeUI() {
+            document.getElementById('tug-bar-p1').style.width = ropePosition + '%';
+            document.getElementById('tug-bar-p2').style.width = (100 - ropePosition) + '%';
+            document.getElementById('tug-flag').style.left = ropePosition + '%';
+        }
+
+        // Supporto tastiera per Tiro alla Fune (Tasti A e L)
+        window.addEventListener('keydown', (e) => {
+            if (!tugActive) return;
+            if (e.key.toLowerCase() === 'a') pullRope(1);
+            if (e.key.toLowerCase() === 'l') pullRope(2);
+        });
+
+        // ==========================================
+        // 4. GIOCO 2: GENIALES DUELL (Quiz in tedesco)
+        // ==========================================
+        let quizTurn = 1; // 1 = 6 anni, 2 = 10 anni
+        let quizRound = 0;
+
+        // Domande semplici e visive per 6 anni
+        const questions6Years = [
+            { visual: "🍎 + 🍎 = ?", q: "Wie viele Äpfel sind es zusammen?", opts: ["2", "4", "1", "5"], ans: "2" },
+            { visual: "🐶 🐱 🐭 🐘", q: "Welches Tier ist am GRÖSSTEN?", opts: ["🐘 Elefant", "🐭 Maus", "🐱 Katze", "🐶 Hund"], ans: "🐘 Elefant" },
+            { visual: "🍌 ☀️ 🍋", q: "Welche Farbe haben diese Dinge?", opts: ["Gelb", "Blau", "Rot", "Lila"], ans: "Gelb" },
+            { visual: "🖐️ + ☝️ = ?", q: "5 Finger plus 1 Finger sind...", opts: ["6", "3", "10", "4"], ans: "6" },
+            { visual: "🚗 ✈️ 🚢 🚲", q: "Was fliegt hoch am Himmel?", opts: ["✈️ Flugzeug", "🚢 Schiff", "🚗 Auto", "🚲 Fahrrad"], ans: "✈️ Flugzeug" },
+            { visual: "❄️ ⛄ 🧣", q: "In welcher Jahreszeit ist es sehr kalt?", opts: ["Winter", "Sommer", "Frühling", "Herbst"], ans: "Winter" }
+        ];
+
+        // Domande di logica, tabelline e cultura per 10 anni
+        const questions10Years = [
+            { visual: "7 × 8 = ?", q: "Was ist 7 mal 8?", opts: ["56", "54", "48", "63"], ans: "56" },
+            { visual: "🌍 🇫🇷 🗼", q: "Wie heißt die Hauptstadt von Frankreich?", opts: ["Paris", "London", "Madrid", "Berlin"], ans: "Paris" },
+            { visual: "🔺 ⬛ ⬟", q: "Wie viele Seiten hat ein Sechseck?", opts: ["6", "5", "8", "7"], ans: "6" },
+            { visual: "🪐 ☀️ 🚀", q: "Welcher ist der größte Planet im Sonnensystem?", opts: ["Jupiter", "Mars", "Saturn", "Erde"], ans: "Jupiter" },
+            { visual: "100 - 37 = ?", q: "Was ist 100 minus 37?", opts: ["63", "73", "67", "53"], ans: "63" },
+            { visual: "💧 ❄️ ♨️", q: "Bei wie viel Grad kocht Wasser?", opts: ["100°C", "50°C", "0°C", "200°C"], ans: "100°C" }
+        ];
+
+        function startQuizDuel() {
+            playSound('pop');
+            hideAllScreens();
+            const screen = document.getElementById('game-quiz');
+            screen.classList.remove('hidden');
+            screen.classList.add('flex');
+            
+            quizTurn = 1;
+            quizRound = 0;
+            loadNextQuestion();
+        }
+
+        function loadNextQuestion() {
+            const badge = document.getElementById('quiz-turn-badge');
+            let currentQ;
+
+            if (quizTurn === 1) {
+                badge.innerText = "Löwe ist dran (6 Jahre) 🦁";
+                badge.className = "px-6 py-2 rounded-full font-black text-white text-lg sm:text-2xl mb-4 shadow-md bg-orange-500";
+                currentQ = questions6Years[Math.floor(Math.random() * questions6Years.length)];
+            } else {
+                badge.innerText = "Drache ist dran (10 Jahre) 🐲";
+                badge.className = "px-6 py-2 rounded-full font-black text-white text-lg sm:text-2xl mb-4 shadow-md bg-teal-500";
+                currentQ = questions10Years[Math.floor(Math.random() * questions10Years.length)];
+            }
+
+            document.getElementById('quiz-visual').innerText = currentQ.visual;
+            document.getElementById('quiz-question').innerText = currentQ.q;
+
+            // Mescola le opzioni
+            const shuffled = [...currentQ.opts].sort(() => Math.random() - 0.5);
+            const optionsContainer = document.getElementById('quiz-options');
+            optionsContainer.innerHTML = '';
+
+            shuffled.forEach(opt => {
+                const btn = document.createElement('button');
+                btn.className = "btn-arcade bg-indigo-500 hover:bg-indigo-600 text-white font-bold text-lg sm:text-2xl py-4 px-6 rounded-2xl border-2 border-indigo-300";
+                btn.innerText = opt;
+                btn.onclick = () => checkQuizAnswer(opt, currentQ.ans);
+                optionsContainer.appendChild(btn);
+            });
+        }
+
+        function checkQuizAnswer(selected, correct) {
+            if (selected === correct) {
+                playSound('win');
+                addPoints(quizTurn, 2);
+                const playerName = quizTurn === 1 ? "Löwe" : "Drache";
+                showModal('🌟', 'Richtige Antwort!', `Super gemacht, ${playerName}! +2 Sterne!`, () => {
+                    quizTurn = quizTurn === 1 ? 2 : 1;
+                    loadNextQuestion();
+                });
+            } else {
+                playSound('error');
+                showModal('🤔', 'Ups! Fast!', `Die richtige Antwort war: ${correct}. Jetzt ist der andere dran!`, () => {
+                    quizTurn = quizTurn === 1 ? 2 : 1;
+                    loadNextQuestion();
+                });
+            }
+        }
+
+        // ==========================================
+        // 5. GIOCO 3: SUPER MEMORY
+        // ==========================================
+        const memoryEmojis = ['🦄', '🦖', '🚀', '🍕', '🐙', '🎸', '🍦', '🤖'];
+        let flippedCards = [];
+        let matchedPairs = 0;
+        let memoryPlayer = 1;
+        let lockBoard = false;
+
+        function startMemoryGame() {
+            playSound('pop');
+            hideAllScreens();
+            const screen = document.getElementById('game-memory');
+            screen.classList.remove('hidden');
+            screen.classList.add('flex');
+            initMemoryBoard();
+        }
+
+        function initMemoryBoard() {
+            const grid = document.getElementById('memory-grid');
+            grid.innerHTML = '';
+            flippedCards = [];
+            matchedPairs = 0;
+            lockBoard = false;
+            updateMemoryTurnUI();
+
+            // Duplica e mescola le 8 emoji (16 carte totali)
+            const deck = [...memoryEmojis, ...memoryEmojis].sort(() => Math.random() - 0.5);
+
+            deck.forEach((emoji, index) => {
+                const card = document.createElement('div');
+                card.className = 'memory-card w-full h-full';
+                card.dataset.emoji = emoji;
+                card.dataset.index = index;
+
+                card.innerHTML = `
+                    <div class="memory-card-inner">
+                        <div class="memory-card-front bg-gradient-to-br from-pink-400 to-purple-500 border-2 border-white text-white text-3xl sm:text-4xl font-black">
+                            ?
+                        </div>
+                        <div class="memory-card-back bg-yellow-100 border-4 border-pink-400 text-4xl sm:text-5xl">
+                            ${emoji}
+                        </div>
+                    </div>
+                `;
+
+                card.onclick = () => flipMemoryCard(card);
+                grid.appendChild(card);
+            });
+        }
+
+        function updateMemoryTurnUI() {
+            const turnDiv = document.getElementById('memory-turn');
+            if (memoryPlayer === 1) {
+                turnDiv.innerText = "Dran ist: 🦁 Löwe (6 Jahre)";
+                turnDiv.className = "bg-orange-100 text-orange-800 border-2 border-orange-400 px-4 py-1 rounded-full font-bold text-sm sm:text-base";
+            } else {
+                turnDiv.innerText = "Dran ist: 🐲 Drache (10 Jahre)";
+                turnDiv.className = "bg-teal-100 text-teal-800 border-2 border-teal-400 px-4 py-1 rounded-full font-bold text-sm sm:text-base";
+            }
+        }
+
+        function flipMemoryCard(card) {
+            if (lockBoard) return;
+            if (card.classList.contains('flipped')) return;
+
+            playSound('pop');
+            card.classList.add('flipped');
+            flippedCards.push(card);
+
+            if (flippedCards.length === 2) {
+                lockBoard = true;
+                checkForMatch();
+            }
+        }
+
+        function checkForMatch() {
+            const [card1, card2] = flippedCards;
+            const isMatch = card1.dataset.emoji === card2.dataset.emoji;
+
+            if (isMatch) {
+                playSound('win');
+                addPoints(memoryPlayer, 1);
+                matchedPairs++;
+                flippedCards = [];
+                lockBoard = false;
+
+                if (matchedPairs === memoryEmojis.length) {
+                    setTimeout(() => {
+                        showModal('🎉', 'Memory geschafft!', 'Ihr habt alle Paare gefunden! +2 Bonus-Sterne für beide!', () => {
+                            addPoints('both', 2);
+                            initMemoryBoard();
+                        });
+                    }, 500);
+                }
+            } else {
+                setTimeout(() => {
+                    playSound('error');
+                    card1.classList.remove('flipped');
+                    card2.classList.remove('flipped');
+                    flippedCards = [];
+                    memoryPlayer = memoryPlayer === 1 ? 2 : 1;
+                    updateMemoryTurnUI();
+                    lockBoard = false;
+                }, 900);
+            }
+        }
+
+        // ==========================================
+        // 6. GIOCO 4: PIOGGIA DI STELLE (CANVAS)
+        // ==========================================
+        let canvas, ctx;
+        let fallingItems = [];
+        let starGameScore = 0;
+        let starTimeLeft = 30;
+        let isStarGameRunning = false;
+
+        function startStarCatcher() {
+            playSound('pop');
+            hideAllScreens();
+            const screen = document.getElementById('game-stars');
+            screen.classList.remove('hidden');
+            screen.classList.add('flex');
+
+            canvas = document.getElementById('star-canvas');
+            ctx = canvas.getContext('2d');
+            
+            resizeStarCanvas();
+            window.addEventListener('resize', resizeStarCanvas);
+
+            fallingItems = [];
+            starGameScore = 0;
+            starTimeLeft = 30;
+            isStarGameRunning = true;
+
+            document.getElementById('star-score').innerText = starGameScore;
+            document.getElementById('star-time').innerText = starTimeLeft;
+
+            // Gestione tocco/clic sul canvas
+            canvas.onpointerdown = handleCanvasTap;
+
+            // Timer del gioco
+            starGameInterval = setInterval(() => {
+                starTimeLeft--;
+                document.getElementById('star-time').innerText = starTimeLeft;
+
+                if (starTimeLeft <= 0) {
+                    endStarGame();
+                }
+            }, 1000);
+
+            // Avvia loop grafico
+            starLoop();
+        }
+
+        function resizeStarCanvas() {
+            if (!canvas) return;
+            const container = document.getElementById('canvas-container');
+            canvas.width = container.clientWidth;
+            canvas.height = container.clientHeight;
+        }
+
+        function spawnFallingItem() {
+            const types = [
+                { emoji: '⭐', points: 1, speed: 2.5, size: 38 },
+                { emoji: '⭐', points: 1, speed: 3.0, size: 38 },
+                { emoji: '💎', points: 3, speed: 4.2, size: 34 },
+                { emoji: '👻', points: -2, speed: 2.8, size: 40 }
+            ];
+            const item = types[Math.floor(Math.random() * types.length)];
+            
+            fallingItems.push({
+                x: Math.random() * (canvas.width - 60) + 30,
+                y: -30,
+                emoji: item.emoji,
+                points: item.points,
+                speed: item.speed,
+                size: item.size
+            });
+        }
+
+        function handleCanvasTap(e) {
+            if (!isStarGameRunning) return;
+            const rect = canvas.getBoundingClientRect();
+            const tapX = e.clientX - rect.left;
+            const tapY = e.clientY - rect.top;
+
+            // Controlla dal più vicino (ultimo disegnato)
+            for (let i = fallingItems.length - 1; i >= 0; i--) {
+                const item = fallingItems[i];
+                const dist = Math.hypot(tapX - item.x, tapY - item.y);
+                
+                // Area di tocco generosa (raggio 45px) adatta anche a dita piccole
+                if (dist < 45) {
+                    starGameScore = Math.max(0, starGameScore + item.points);
+                    document.getElementById('star-score').innerText = starGameScore;
+                    
+                    if (item.points > 0) {
+                        playSound('star');
+                    } else {
+                        playSound('error');
+                    }
+                    
+                    fallingItems.splice(i, 1);
+                    break;
+                }
+            }
+        }
+
+        function starLoop() {
+            if (!isStarGameRunning) return;
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Genera nuovi oggetti casualmente
+            if (Math.random() < 0.06) {
+                spawnFallingItem();
+            }
+
+            // Disegna e muovi gli oggetti
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+
+            for (let i = fallingItems.length - 1; i >= 0; i--) {
+                const item = fallingItems[i];
+                item.y += item.speed;
+
+                ctx.font = `${item.size}px Arial`;
+                ctx.fillText(item.emoji, item.x, item.y);
+
+                // Rimuovi se esce dallo schermo
+                if (item.y > canvas.height + 40) {
+                    fallingItems.splice(i, 1);
+                }
+            }
+
+            starAnimFrame = requestAnimationFrame(starLoop);
+        }
+
+        function endStarGame() {
+            isStarGameRunning = false;
+            clearInterval(starGameInterval);
+            cancelAnimationFrame(starAnimFrame);
+            playSound('win');
+
+            const bonus = Math.max(1, Math.floor(starGameScore / 5));
+            addPoints('both', bonus);
+
+            showModal(
+                '🌠', 
+                'Zeit abgelaufen!', 
+                `Ihr habt zusammen ${starGameScore} Punkte gesammelt! Jeder bekommt +${bonus} Sterne!`, 
+                startStarCatcher
+            );
+        }
+
+        // Inizializzazione al caricamento
+        window.onload = () => {
+            updateScoreDisplay();
+        };
+    </script>
+</body>
+</html>
